@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { Op } = require('sequelize');
 const sequelize = require('../config/database');
-const Drug = require('../models/sequelize/Drug');
+const Drug = require('../models/Drug');
 
 // Get all distinct companies for the filter
 router.get('/companies', async (req, res) => {
@@ -67,7 +67,7 @@ router.get('/', async (req, res) => {
     // Get drugs
     const drugs = await Drug.findAll({
       where: whereClause,
-      order: [['launchDate', 'DESC']],
+      order: [['launch_date', 'DESC']],
       limit: parseInt(limit),
       offset: parseInt(offset)
     });

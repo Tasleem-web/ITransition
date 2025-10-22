@@ -9,7 +9,7 @@ const sequelize = require("./config/database");
 // Initialize default table configuration
 const initializeConfigs = async () => {
   try {
-    const DrugConfig = require('./models/sequelize/DrugConfig');
+    const DrugConfig = require('./models/DrugConfig');
     const defaultConfigs = [
       { field: 'id', label: 'ID', order: 1 },
       { field: 'code', label: 'Code', order: 2 },

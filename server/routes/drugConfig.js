@@ -1,14 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const DrugConfig = require('../models/sequelize/DrugConfig');
+const DrugConfig = require('../models/DrugConfig');
 
 // Get table configuration
 router.get('/', async (req, res) => {
   try {
-    const config = await DrugConfig.findAll({
-      where: { visible: true },
-      order: [['order', 'ASC']]
-    });
+    const config = await DrugConfig.findAll();
     res.json(config);
   } catch (error) {
     res.status(500).json({ error: error.message });
