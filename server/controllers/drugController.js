@@ -28,7 +28,7 @@ exports.getDrugs = async (req, res) => {
     } = req.query;
 
     const offset = (page - 1) * limit;
-    
+
     // Build where clause
     const whereClause = {};
     if (company) {
@@ -71,4 +71,27 @@ exports.getDrugs = async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
+};
+
+exports.getAllDrugs = async (req, res) => {
+  try {
+
+    const userLocale = req.acceptsLanguages()[0] || 'en-US';
+
+    const drugs = await Drug.findAll({});
+    const transformedDrugs = drugs.map(drug => ({
+      id: drug.id,
+      code: drug.code,
+      name: `${drug.genericName} (${drug.brandName})`,
+      company: drug.company,
+      launchDate: drug.launchDate ? new Date(drug.launchDate).toLocaleDateString(userLocale) : null
+    }));
+
+    res.json({
+      data: transformedDrugs
+    })
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+
 };

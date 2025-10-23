@@ -30,7 +30,13 @@ const initializeConfigs = async () => {
   }
 };
 // Set up middleware
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:3000',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept']
+}));
+
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 app.use(cookieParser());
@@ -41,8 +47,8 @@ app.get("/", (req, res) => {
 });
 
 // Set up routes
-app.use('/api/drug-config', require('./routes/drugConfig'));
-app.use('/api/drugs', require('./routes/drugs'));
+app.use('/drug-config', require('./routes/drugConfig'));
+app.use('/drugs', require('./routes/drugs'));
 
 // Serve static assets if in production
 if (process.env.NODE_ENV === "production") {

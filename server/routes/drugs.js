@@ -8,4 +8,6 @@ router.get('/companies', drugController.getAllCompanies);
 // Get drugs with filtering and pagination
 router.get('/', drugController.getDrugs);
 
+router.get('/getAllDrugs', drugController.getAllDrugs);
+
 module.exports = router;
