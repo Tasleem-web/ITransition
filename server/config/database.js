@@ -22,16 +22,7 @@ const sequelize = new Sequelize(
   {
     host: dbConfig.host,
     dialect: 'mysql',
-    dialectOptions: {
-      dateStrings: true,
-      typeCast: function (field, next) {
-        if (field.type === 'DATETIME') {
-          return field.string()
-        }
-        return next()
-      }
-    },
-    timezone: '+00:00',
+    logging: console.log,
     pool: {
       max: 5,
       min: 0,
@@ -43,19 +34,21 @@ const sequelize = new Sequelize(
       underscored: true
     },
     dialectOptions: {
+      // Prevents Sequelize from appending 'Z' to dates for DATETIME columns.
+      useUTC: false,
+      // Treats DATETIME as strings for custom handling.
       dateStrings: true,
-      typeCast: true
+      typeCast: function (field, next) {
+        if (field.type === 'DATETIME') {
+          return new Date(field.string());
+        }
+        return next();
+      },
+      connectTimeout: 60000
     },
-    dialectOptions: {
-      dateStrings: true,
-      typeCast: true,
-      timezone: '+00:00'
-    },
-    timezone: '+00:00', // for writing to database
-    logging: console.log, // Enable SQL query logging
-    dialectOptions: {
-      connectTimeout: 60000 // Increase connection timeout
-    }
+    // Set a correct timezone. All dates will be converted relative to this offset.
+    // Use '+00:00' for UTC or a server-specific offset.
+    timezone: '+00:00',
   }
 );
 

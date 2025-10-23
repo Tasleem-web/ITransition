@@ -35,6 +35,11 @@ app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 app.use(cookieParser());
 
+// testing route
+app.get("/", (req, res) => {
+  res.json({ message: "Welcome to ITransition" });
+});
+
 // Set up routes
 app.use('/api/drug-config', require('./routes/drugConfig'));
 app.use('/api/drugs', require('./routes/drugs'));
@@ -43,11 +48,6 @@ app.use('/api/drugs', require('./routes/drugs'));
 if (process.env.NODE_ENV === "production") {
   app.use(express.static("client/build"));
   app.use(express.bodyParser({ limit: '50mb' }));
-
-  // index.html for all page routes    html or routing and naviagtion
-  app.get("*", (req, res) => {
-    res.sendFile(path.resolve(__dirname, "../client", "build", "index.html"));
-  });
 }
 
 const port = process.env.PORT || 5000;
