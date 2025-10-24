@@ -1,5 +1,5 @@
 import { USER_SERVER } from "../../config";
-import { FETCH_DATA_CONFIG_FAILURE, FETCH_DATA_CONFIG_SUCCESS, FETCH_DATA_FAILURE, FETCH_DATA_SUCCESS, FETCH_DRUG, FETCH_DRUG_CONFIG } from "../constants";
+import { FETCH_DATA_CONFIG_FAILURE, FETCH_DATA_CONFIG_SUCCESS, FETCH_DATA_FAILURE, FETCH_DATA_SUCCESS, FETCH_DRUG, FETCH_DRUG_CONFIG, UPDATE_CONFIG_VISIBILITY_SUCCESS, UPDATE_DRUG_ORDER_SUCCESS } from "../constants";
 
 import axios from 'axios';
 
@@ -23,6 +23,22 @@ export const fetchDrugConfigAction = () => {
       dispatch({ type: FETCH_DATA_CONFIG_SUCCESS, payload: response.data });
     } catch (error) {
       dispatch({ type: FETCH_DATA_CONFIG_FAILURE, payload: error.message });
+    }
+  };
+};
+
+export const updateColumnOrderAction = (newConfig) => {
+  return async (dispatch) => {
+    try {
+
+      await axios.put(`${USER_SERVER}/drug-config`, newConfig);
+
+      dispatch({
+        type: UPDATE_DRUG_ORDER_SUCCESS,
+        payload: newConfig,
+      });
+    } catch (error) {
+      console.error('API Error:', error);
     }
   };
 };

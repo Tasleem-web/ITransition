@@ -1,9 +1,14 @@
-/* ... existing styles ... */
+.dragging {
+  opacity: 0.5;
+  background-color: #f0f0f0;
+}
 
-.pagination-controls .page-dots {
-  display: flex;
-  align-items: center;
-  padding: 8px 16px;
-  font-size: 14px;
-  color: #6c757d;
+.drag-over-effect {
+  border-left: 2px solid #007bff;
+  /* Add a border to highlight the drop target */
+}
+
+/* Optional: Add a transition for a smoother effect */
+.table th {
+  transition: all 0.2s ease-in-out;
 }

@@ -1,6 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchDrugAction, fetchDrugConfigAction } from '../store/actions/drugActions';
+import {
+  fetchDrugAction,
+  fetchDrugConfigAction,
+  updateColumnOrderAction,
+} from '../store/actions/drugActions';
 import usePagination from '../hooks/usePagination';
 import { FaSort, FaSortUp, FaSortDown } from 'react-icons/fa';
 import './HomePage.css';
@@ -8,61 +12,113 @@ import './HomePage.css';
 function HomePage() {
   const dispatch = useDispatch();
   const drugsList = useSelector((state) => state.list);
-  const drugsConfigList = useSelector((state) => state.config);
-
-  const columns = [
-    { dataField: 'id', text: 'Drug ID' },
-    { dataField: 'code', text: 'Drug Code' },
-    { dataField: 'name', text: 'Drug Name' },
-    { dataField: 'company', text: 'Company Name' },
-    { dataField: 'launchDate', text: 'Launch Date' },
-  ];
+  const columnConfig = useSelector((state) => state.config);
+  console.log('Column Configuration:', columnConfig);
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedColumns, setSelectedColumns] = useState(columns.map(col => col.dataField));
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [sortField, setSortField] = useState(null);
   const [sortOrder, setSortOrder] = useState('asc');
+  const [visibleColumns, setVisibleColumns] = useState([]);
+
+  const dragItem = useRef(null);
+  const dragOverItem = useRef(null);
+
+  const selectedFieldsForSearch = useMemo(() => {
+    return visibleColumns.map((col) => col.field);
+  }, [visibleColumns]);
+
+  const handleDragStart = (e, index) => {
+    dragItem.current = index;
+    e.dataTransfer.effectAllowed = 'move';
+    e.target.classList.add('dragging');
+  };
+
+  const handleDragEnter = (e, index) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    dragOverItem.current = index;
+  };
+
+  const handleDragEnd = (e) => {
+    e.target.classList.remove('dragging');
+
+    if (!columnConfig || columnConfig.length === 0) {
+      console.error('Column configuration not loaded yet.');
+      dragItem.current = null;
+      dragOverItem.current = null;
+      return;
+    }
+
+    if (dragItem.current === null || dragOverItem.current === null) {
+      dragItem.current = null;
+      dragOverItem.current = null;
+      return;
+    }
+
+    if (visibleColumns.length === 0) {
+      return;
+    }
+
+    const newOrderedVisibleColumns = [...visibleColumns];
+    const draggedColumn = newOrderedVisibleColumns[dragItem.current];
+    newOrderedVisibleColumns.splice(dragItem.current, 1);
+    newOrderedVisibleColumns.splice(dragOverItem.current, 0, draggedColumn);
+
+    // Update local state for immediate visual feedback
+    setVisibleColumns(newOrderedVisibleColumns);
+
+    const updatedNewConfig = columnConfig.map((col) => {
+      const newIndex = newOrderedVisibleColumns.findIndex(
+        (vCol) => vCol.field === col.field
+      );
+      return newIndex !== -1 ? { ...col, order: newIndex + 1 } : col;
+    });
+
+    dispatch(updateColumnOrderAction(updatedNewConfig));
+
+    dragItem.current = null;
+    dragOverItem.current = null;
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+  };
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
     setCurrentPage(1);
   };
 
-  const handleColumnToggle = (dataField) => {
-    if (selectedColumns.includes(dataField)) {
-      setSelectedColumns(selectedColumns.filter(col => col !== dataField));
-    } else {
-      setSelectedColumns([...selectedColumns, dataField]);
-    }
-    setCurrentPage(1);
+  const handleColumnToggle = (field) => {
+    const updatedConfig = columnConfig.map((col) =>
+      col.field === field ? { ...col, visible: !col.visible } : col
+    );
+    dispatch(updateColumnOrderAction(updatedConfig));
   };
 
-  const handleSortingChange = (dataField) => {
-    const isAsc = sortField === dataField && sortOrder === 'asc';
+  const handleSortingChange = (field) => {
+    const isAsc = sortField === field && sortOrder === 'asc';
     setSortOrder(isAsc ? 'desc' : 'asc');
-    setSortField(dataField);
+    setSortField(field);
   };
 
   const sortedAndFilteredData = useMemo(() => {
     let filtered = drugsList;
 
     if (searchTerm) {
-      filtered = filtered.filter(row =>
-        selectedColumns.some(col =>
-          row[col] && row[col].toString().toLowerCase().includes(searchTerm.toLowerCase())
+      filtered = filtered.filter((row) =>
+        selectedFieldsForSearch.some(
+          (col) =>
+            row[col] &&
+            row[col].toString().toLowerCase().includes(searchTerm.toLowerCase())
         )
       );
     }
 
-    const mappedData = filtered.map(drug => ({
-      ...drug,
-      name: `${drug.name}`
-    }));
-
     if (sortField) {
-      mappedData.sort((a, b) => {
+      filtered.sort((a, b) => {
         const aValue = a[sortField];
         const bValue = b[sortField];
 
@@ -71,8 +127,7 @@ function HomePage() {
         if (bValue == null) return -1;
 
         let comparison = 0;
-
-        if (sortField === 'id' || sortField === 'code') {
+        if (typeof aValue === 'number' && typeof bValue === 'number') {
           comparison = aValue - bValue;
         } else if (sortField === 'launchDate') {
           comparison = new Date(aValue).getTime() - new Date(bValue).getTime();
@@ -84,24 +139,31 @@ function HomePage() {
       });
     }
 
-    return mappedData;
-  }, [drugsList, searchTerm, selectedColumns, sortField, sortOrder]);
+    return filtered;
+  }, [drugsList, searchTerm, selectedFieldsForSearch, sortField, sortOrder]);
+
+  const { currentData, maxPage, jump, next, prev, paginationRange } = usePagination({
+    data: sortedAndFilteredData,
+    itemsPerPage: 10,
+    currentPage,
+    setCurrentPage,
+  });
+
+  // Synchronize local state with Redux config when it changes
+  useEffect(() => {
+    if (columnConfig.length > 0) {
+      setVisibleColumns(
+        columnConfig.filter((col) => col.visible).sort((a, b) => a.order - b.order)
+      );
+    }
+  }, [columnConfig, currentData]);
 
   useEffect(() => {
     dispatch(fetchDrugAction());
     dispatch(fetchDrugConfigAction());
   }, [dispatch]);
 
-  const {
-    currentData,
-    maxPage,
-    jump,
-    next,
-    prev,
-    paginationRange
-  } = usePagination({ data: sortedAndFilteredData, itemsPerPage: 10, currentPage, setCurrentPage });
-
-  if (!drugsList || drugsList.length === 0) {
+  if (!drugsList || drugsList.length === 0 || columnConfig.length === 0) {
     return (
       <div className="container mt-4">
         <h2>Drugs List</h2>
@@ -133,17 +195,17 @@ function HomePage() {
               <div className={`dropdown-menu ${isDropdownOpen ? 'show' : ''}`}>
                 <div className="p-3">
                   <h6 className="dropdown-header">Select Columns to Search</h6>
-                  {columns.map(col => (
-                    <div key={col.dataField} className="form-check">
+                  {columnConfig.map((col) => (
+                    <div key={col.field} className="form-check">
                       <input
                         className="form-check-input"
                         type="checkbox"
-                        id={`check-${col.dataField}`}
-                        checked={selectedColumns.includes(col.dataField)}
-                        onChange={() => handleColumnToggle(col.dataField)}
+                        id={`check-${col.field}`}
+                        checked={col.visible}
+                        onChange={() => handleColumnToggle(col.field)}
                       />
-                      <label className="form-check-label" htmlFor={`check-${col.dataField}`}>
-                        {col.text}
+                      <label className="form-check-label" htmlFor={`check-${col.field}`}>
+                        {col.label}
                       </label>
                     </div>
                   ))}
@@ -157,50 +219,45 @@ function HomePage() {
       <h2 className="mb-4">Drugs List</h2>
       <div className="table-responsive">
         <table className="table table-striped table-bordered">
-          <thead className="table-dark">
+          <thead className="table-light">
             <tr>
-              {selectedColumns.map(colField => {
-                const col = columns.find(c => c.dataField === colField);
-                return (
-                  <th key={col.dataField} onClick={() => handleSortingChange(col.dataField)}>
-                    <div className="d-flex align-items-center">
-                      <span>{col.text}</span>
-                      <span className="ms-2">
-                        {sortField === col.dataField ? (
-                          sortOrder === 'asc' ? <FaSortUp /> : <FaSortDown />
-                        ) : (
-                          <FaSort className="text-muted" />
-                        )}
-                      </span>
-                    </div>
-                  </th>
-                );
-              })}
+              {visibleColumns.map((col, index) => (
+                <th
+                  key={col.field}
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, index)}
+                  onDragEnter={(e) => handleDragEnter(e, index)}
+                  onDragEnd={handleDragEnd}
+                  onDragOver={handleDragOver}
+                  onClick={() => handleSortingChange(col.field)}
+                  className={dragOverItem.current === index ? 'drag-over-effect' : ''}
+                >
+                  <div className="d-flex align-items-center">
+                    <span>{col.label}</span>
+                    <span className="ms-2">
+                      {sortField === col.field ? (
+                        sortOrder === 'asc' ? <FaSortUp /> : <FaSortDown />
+                      ) : (
+                        <FaSort className="text-muted" />
+                      )}
+                    </span>
+                  </div>
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
-            {currentData.map((drug) => (
+            {currentData.map((drug, rowIndex) => (
               <tr key={drug.id}>
-                {selectedColumns.map((colField) => {
-                  switch (colField) {
-                    case 'launchDate':
-                      return (
-                        <td key={`${drug.id}-${colField}`}>
-                          {drug.launchDate ? new Date(drug.launchDate).toLocaleDateString(navigator.language) : 'N/A'}
-                        </td>
-                      );
-                    case 'name':
-                      return (
-                        <td key={`${drug.id}-${colField}`}>{drug.name}</td>
-                      );
-                    default:
-                      return (
-                        <td key={`${drug.id}-${colField}`}>
-                          {drug[colField]}
-                        </td>
-                      );
-                  }
-                })}
+                {visibleColumns.map((col) => (
+                  <td key={`${drug.id}-${col.field}`}>
+                    {col.field === 'launchDate' ? (
+                      drug.launchDate ? new Date(drug.launchDate).toLocaleDateString(navigator.language) : 'N/A'
+                    ) : (
+                      drug[col.field]
+                    )}
+                  </td>
+                ))}
               </tr>
             ))}
           </tbody>
