@@ -57,6 +57,15 @@ function HomePage() {
       return;
     }
 
+    const visibleColumns = [...columnConfig]
+      .filter((col) => col.visible)
+      .sort((a, b) => {
+        if (a.order !== b.order) {
+          return a.order - b.order;
+        }
+        return a.id - b.id;
+      });
+
     if (visibleColumns.length === 0) {
       return;
     }
@@ -66,14 +75,14 @@ function HomePage() {
     newOrderedVisibleColumns.splice(dragItem.current, 1);
     newOrderedVisibleColumns.splice(dragOverItem.current, 0, draggedColumn);
 
-    // Update local state for immediate visual feedback
-    setVisibleColumns(newOrderedVisibleColumns);
-
     const updatedNewConfig = columnConfig.map((col) => {
       const newIndex = newOrderedVisibleColumns.findIndex(
         (vCol) => vCol.field === col.field
       );
-      return newIndex !== -1 ? { ...col, order: newIndex + 1 } : col;
+      if (newIndex !== -1) {
+        return { ...col, order: newIndex + 1 };
+      }
+      return col;
     });
 
     dispatch(updateColumnOrderAction(updatedNewConfig));
@@ -192,9 +201,9 @@ function HomePage() {
               >
                 <i className="fa fa-sliders"></i> Advanced Search
               </button>
-              <div className={`dropdown-menu ${isDropdownOpen ? 'show' : ''}`}>
-                <div className="p-3">
-                  <h6 className="dropdown-header">Select Columns to Search</h6>
+              <div className={`dropdown-menu end-0 ${isDropdownOpen ? 'show' : ''}`}>
+                <div className="px-3">
+                  <h6 className="dropdown-header px-0">Select Columns to Search</h6>
                   {columnConfig.map((col) => (
                     <div key={col.field} className="form-check">
                       <input

@@ -31,11 +31,11 @@ export const updateColumnOrderAction = (newConfig) => {
   return async (dispatch) => {
     try {
 
-      await axios.put(`${USER_SERVER}/drug-config`, newConfig);
+      const response = await axios.put(`${USER_SERVER}/drug-config`, newConfig);
 
       dispatch({
         type: UPDATE_DRUG_ORDER_SUCCESS,
-        payload: newConfig,
+        payload: response.data,
       });
     } catch (error) {
       console.error('API Error:', error);
