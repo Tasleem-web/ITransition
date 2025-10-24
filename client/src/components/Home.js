@@ -5,15 +5,15 @@ import {
   fetchDrugConfigAction,
   updateColumnOrderAction,
 } from '../store/actions/drugActions';
-import usePagination from '../hooks/usePagination';
 import { FaSort, FaSortUp, FaSortDown } from 'react-icons/fa';
-import './HomePage.css';
+import './Home.css';
+import Pagination from './Pagination';
+import { usePagination } from '../hooks/usePagination';
 
-function HomePage() {
+function Home() {
   const dispatch = useDispatch();
   const drugsList = useSelector((state) => state.list);
   const columnConfig = useSelector((state) => state.config);
-  console.log('Column Configuration:', columnConfig);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -116,7 +116,7 @@ function HomePage() {
   const sortedAndFilteredData = useMemo(() => {
     let filtered = drugsList;
 
-    if (searchTerm) {
+    if (searchTerm && selectedFieldsForSearch.length > 0) {
       filtered = filtered.filter((row) =>
         selectedFieldsForSearch.some(
           (col) =>
@@ -127,7 +127,7 @@ function HomePage() {
     }
 
     if (sortField) {
-      filtered.sort((a, b) => {
+      filtered = [...filtered].sort((a, b) => {
         const aValue = a[sortField];
         const bValue = b[sortField];
 
@@ -151,21 +151,24 @@ function HomePage() {
     return filtered;
   }, [drugsList, searchTerm, selectedFieldsForSearch, sortField, sortOrder]);
 
-  const { currentData, maxPage, jump, next, prev, paginationRange } = usePagination({
-    data: sortedAndFilteredData,
-    itemsPerPage: 10,
-    currentPage,
-    setCurrentPage,
-  });
+  const pagination = usePagination(sortedAndFilteredData, 10);
+  const {
+    currentData,
+    totalItems,
+    startItem,
+    endItem,
+    currentPageNumber,
+    totalPages
+  } = pagination;
 
-  // Synchronize local state with Redux config when it changes
+
   useEffect(() => {
     if (columnConfig.length > 0) {
       setVisibleColumns(
         columnConfig.filter((col) => col.visible).sort((a, b) => a.order - b.order)
       );
     }
-  }, [columnConfig, currentData]);
+  }, [columnConfig]);
 
   useEffect(() => {
     dispatch(fetchDrugAction());
@@ -182,7 +185,7 @@ function HomePage() {
   }
 
   return (
-    <div className="container mt-4">
+    <div className="container pt-3">
       <div id="toolbar" className="mb-3">
         <div className="d-flex justify-content-between align-items-center">
           <div className="input-group">
@@ -199,7 +202,7 @@ function HomePage() {
                 type="button"
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
               >
-                <i className="fa fa-sliders"></i> Advanced Search
+                <i className="fa fa-sliders"></i> Adjust Columns
               </button>
               <div className={`dropdown-menu end-0 ${isDropdownOpen ? 'show' : ''}`}>
                 <div className="px-3">
@@ -272,38 +275,13 @@ function HomePage() {
           </tbody>
         </table>
       </div>
-
-      <div className="pagination-controls mt-3">
-        <button
-          className="btn btn-outline-primary"
-          onClick={prev}
-          disabled={currentPage === 1}
-        >
-          Previous
-        </button>
-        {paginationRange.map((page, index) => (
-          page === '...' ? (
-            <span key={index} className="page-dots">...</span>
-          ) : (
-            <button
-              key={page}
-              className={`btn ${currentPage === page ? 'btn-primary' : 'btn-outline-primary'}`}
-              onClick={() => jump(page)}
-            >
-              {page}
-            </button>
-          )
-        ))}
-        <button
-          className="btn btn-outline-primary"
-          onClick={next}
-          disabled={currentPage === maxPage}
-        >
-          Next
-        </button>
-      </div>
+      {
+        currentData.length > 0 && (
+          <Pagination pagination={pagination} />
+        )
+      }
     </div>
   );
 }
 
-export default HomePage;
+export default Home;

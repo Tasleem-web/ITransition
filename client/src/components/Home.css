@@ -12,3 +12,7 @@
 .table th {
   transition: all 0.2s ease-in-out;
 }
+
+.table-responsive {
+  max-height: calc(100vh - 220px);
+}
